@@ -42,8 +42,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.lunchtray.datasource.DataSource
+import com.example.lunchtray.ui.AccompanimentMenuScreen
+import com.example.lunchtray.ui.CheckoutScreen
+import com.example.lunchtray.ui.EntreeMenuScreen
 import com.example.lunchtray.ui.OrderViewModel
+import com.example.lunchtray.ui.SideDishMenuScreen
 import com.example.lunchtray.ui.StartOrderScreen
 import com.example.lunchtray.ui.theme.LunchTrayTheme
 
@@ -90,23 +96,20 @@ fun LunchAppBar(
 fun LunchTrayApp() {
     // NavHostController
     val navController: NavHostController = rememberNavController()
-
+    val backStackEntry by navController.currentBackStackEntryAsState()
     // Create ViewModel
     val viewModel: OrderViewModel = viewModel()
 
-    val currentScreen = LunchTrayScreen.valueOf(LunchTrayScreen.StartOrder.name)
+    val currentScreen = LunchTrayScreen.valueOf(
+        backStackEntry?.destination?.route ?: LunchTrayScreen.StartOrder.name
+    )
 
     Scaffold(
         topBar = {
             LunchAppBar(
                 currentScreen = currentScreen,
                 isBackButtonEnabled = navController.previousBackStackEntry != null,
-                navigateUp = { navController.navigateUp() },
-                modifier = Modifier
-                    .border(
-                        BorderStroke(width = 2.dp, color = Color.Red),
-                        shape = RoundedCornerShape(size = 32.dp)
-                    )
+                navigateUp = { navController.navigateUp() }
             )
         }
     ) { innerPadding ->
@@ -121,9 +124,41 @@ fun LunchTrayApp() {
             composable(route = LunchTrayScreen.StartOrder.name) {
                 StartOrderScreen(
                     onStartOrderButtonClicked = {
+                        viewModel.resetOrder()
+                        navController.navigate(LunchTrayScreen.EntreeMenu.name)
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+            }
+            composable(route = LunchTrayScreen.EntreeMenu.name) {
+                EntreeMenuScreen(
+                    options = DataSource.entreeMenuItems,
+                    onSelectionChanged = { viewModel.updateEntree(it) },
+                    onNextButtonClicked = { navController.navigate(LunchTrayScreen.SideDishMenu.name) },
+                    onCancelButtonClicked = { navController.navigate(LunchTrayScreen.StartOrder.name) }
+                )
+            }
+            composable(route = LunchTrayScreen.SideDishMenu.name) {
+                SideDishMenuScreen(
+                    options = DataSource.sideDishMenuItems,
+                    onSelectionChanged = { viewModel.updateSideDish(it) },
+                    onNextButtonClicked = { navController.navigate(LunchTrayScreen.AccompanimentMenu.name) },
+                    onCancelButtonClicked = { navController.navigate(LunchTrayScreen.StartOrder.name) }
+                )
+            }
+            composable(route = LunchTrayScreen.AccompanimentMenu.name) {
+                AccompanimentMenuScreen(
+                    options = DataSource.accompanimentMenuItems,
+                    onSelectionChanged = { viewModel.updateAccompaniment(it) },
+                    onNextButtonClicked = { navController.navigate(LunchTrayScreen.Checkout.name) },
+                    onCancelButtonClicked = { navController.navigate(LunchTrayScreen.StartOrder.name) }
+                )
+            }
+            composable(route = LunchTrayScreen.Checkout.name) {
+                CheckoutScreen(
+                    orderUiState = uiState,
+                    onNextButtonClicked = { navController.navigate(LunchTrayScreen.StartOrder.name) },
+                    onCancelButtonClicked = { navController.navigate(LunchTrayScreen.StartOrder.name) })
             }
         }
     }
